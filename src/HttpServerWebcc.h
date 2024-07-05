@@ -18,8 +18,8 @@
 //!
 //*****************************************************************************
 
-#ifndef HTTPSERVERWEBCC__H
-#define HTTPSERVERWEBCC__H
+#ifndef MAU_HTTPSERVERWEBCC__H
+#define MAU_HTTPSERVERWEBCC__H
 
 /***  System Includes  *******************************************************/
 
@@ -35,18 +35,18 @@
 
 /***  Global Component Includes  *********************************************/
 
-#ifndef             GLOBAL__H
-   #include "Global/Global.h"
+#ifndef  MAU_GLOBAL__H
+   #include "Global.h"
 #endif
 
-#ifndef                     HTTPSERVER__H
-   #include "Common/Generic/HttpServer.h"
+#ifndef      MAU_HTTPSERVER__H
+   #include "HttpServer.h"
 #endif
 
 /***  Exception Includes  ****************************************************/
 
-#ifndef             EXCEPTION__H
-   #include "Global/Exception.h"
+#ifndef      MAU_EXCEPTION__H
+   #include "Exception.h"
 #endif
 
 /***  Defines  ***************************************************************/
@@ -63,7 +63,9 @@
 //!
 //****************************************************************************
 
-class HTTPSERVER_EXPORT HttpServerWebcc : public HttpServer
+namespace mau {
+
+class MAUCPPHTTPSERVER_EXPORT HttpServerWebcc : public HttpServer
 {
 
 public:
@@ -102,5 +104,7 @@ private:
    static EventMsg msgInvalidAddressEx;
    static EventMsg msgInvalidPortEx;
 };
+
+}
 
 #endif

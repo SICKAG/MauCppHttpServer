@@ -24,6 +24,8 @@
 #undef THIS_FILE
 static char THIS_FILE[] = __FILE__;
 
+namespace mau {
+
 QString HttpServer::Address() {
    return AddressImpl();
 }
@@ -70,4 +72,6 @@ bool HttpServer::SetCertificate(const QByteArray& certificateData, HttpServer::S
 
 bool HttpServer::SetPrivateKey(const QByteArray& keyData, HttpServer::SslEncoding encoding, HttpServer::SslKeyAlgorithm algorithm, const QString& passphrase) {
    return started ? false : SetPrivateKeyImpl(keyData, encoding, algorithm, passphrase);
+}
+
 }

@@ -18,8 +18,12 @@
 //!
 //*****************************************************************************
 
-#ifndef HTTPSERVER__H
-#define HTTPSERVER__H
+#ifndef MAU_HTTPSERVER__H
+#define MAU_HTTPSERVER__H
+
+#ifndef  MAU_GLOBAL__H
+   #include "Global.h"
+#endif
 
 #pragma push_macro("DELETE")
 #undef DELETE
@@ -38,7 +42,9 @@
 //!
 //****************************************************************************
 
-class HTTPSERVER_EXPORT HttpServer
+namespace mau {
+
+class MAUCPPHTTPSERVER_EXPORT HttpServer
 {
 public:
    virtual ~HttpServer() {}
@@ -71,6 +77,27 @@ public:
    enum SslEncoding {
       PEM,
       DER
+   };
+
+   struct HttpRequest {
+      ProtocolVersion protocolVersion = HTTP_1_1;  //!< Protcol version
+      HttpMethod method;                           //!< Request method
+      QHash<QString, QString> headers;             //!< The headers of the request
+      QByteArray body;                             //!< Request body
+   };
+
+   struct HttpResponse {
+      ProtocolVersion protocolVersion = HTTP_1_1;  //!< Protcol version
+      int statusCode;                              //!< Response status code
+      QHash<QString, QString> headers;             //!< The headers of the response
+      QByteArray body;                             //!< Response body
+   };
+
+   struct PathInfo {
+      QString path;                                //!< The URL path
+      QHash<QString, QString> variables;           //!< Names and values of path variables
+      QString multiLevel;                          //!< Path that matched the multi level '#' wildcard
+      QHash<QString, QString> query;               //!< The query component of the URI
    };
 
    QString Address();
@@ -161,28 +188,6 @@ public:
       //!<     the certificate.
 
 protected:
-   struct HttpRequest {
-      ProtocolVersion protocolVersion = HTTP_1_1;  //!< Protcol version
-      HttpMethod method;                           //!< Request method
-      QHash<QString, QString> headers;             //!< The headers of the request
-      QByteArray body;                             //!< Request body
-   };
-
-   struct HttpResponse {
-      ProtocolVersion protocolVersion = HTTP_1_1;  //!< Protcol version
-      int statusCode;                              //!< Response status code
-      QHash<QString, QString> headers;             //!< The headers of the response
-      QByteArray body;                             //!< Response body
-   };
-
-   struct PathInfo {
-      QString path;                                //!< The URL path
-      QHash<QString, QString> variables;           //!< Names and values of path variables
-      QString multiLevel;                          //!< Path that matched the multi level '#' wildcard
-      QHash<QString, QString> query;               //!< The query component of the URI
-   };
-
-protected:
    virtual QString AddressImpl() = 0;
    virtual void AddressImpl(const QString& address) = 0;
    virtual int PortImpl() = 0;
@@ -213,6 +218,8 @@ private:
    bool started = false;
 
 };
+
+}
 
 #pragma pop_macro("DELETE")
 #endif

@@ -35,21 +35,23 @@
 #include <QtNetwork/QTcpSocket>
 #include <QtNetwork/QSslCertificate>
 #include <QtNetwork/QSslKey>
+#pragma pop_macro("new")
+
+#include <boost/asio/ip/tcp.hpp>
 
 #include "webcc/url.h"
 #include "webcc/server.h"
 #include "webcc/ssl_server.h"
 #include "webcc/response_builder.h"
-#pragma pop_macro("new")
-
-#include <boost/asio/ip/tcp.hpp>
-
 
 #undef THIS_FILE
 static char THIS_FILE[] = __FILE__;
 
-#define Ex(id)    Exception("HttpServerWebcc::"#id"Ex", "Generic", Event::error, msg##id##Ex).LocHere()
-#define Warn(id)  Exception("HttpServerWebcc::"#id"", "Generic", Event::warning, msg##id##Warn).LocHere()
+#define Ex(id)           Exception("HttpServerWebcc::"#id"Ex", Exception::error, msg##id##Ex).LocHere()
+#define Warn(id)         Exception("HttpServerWebcc::"#id"", Exception::warning, msg##id##Warn).LocHere()
+#define ThrowUnknownEx() Exception("HttpServerWebcc::UnknownEx", Exception::error, msgUnknownEx).LocHere()
+
+namespace mau {
 
 //*****************************************************************************
 //!
@@ -75,7 +77,6 @@ private:
    class ServerThread : public QThread {
    public:
        ServerThread(webcc::Server* server) : server(server) {}
-       AtomicFlag quit;        //!< Thread-safe flag indicating a thread exit.
 
    protected:
        virtual void run();
@@ -131,6 +132,7 @@ private:
    QSslCertificate certificate;
    QSslKey privateKey;
 
+   static EventMsg msgUnknownEx;
    static EventMsg msgFailedToStartEx;
    static EventMsg msgInvalidEndpointEx;
    static EventMsg msgInvalidEndpointHashtagWildcardEx;
@@ -144,49 +146,65 @@ private:
    static EventMsg msgHeadWithBodyWarn;
 };
 
-EventMsg HttpServerWebcc::HttpServerWebccPrivate::msgFailedToStartEx = EventMsg()
-   .Add("Couldn't start http server: \"%1\".", EventMsg::langEnUs)
-   .Add("Http-Server konnte nicht gestartet werden: \"%1\".", EventMsg::langDeDe);
+EventMsg HttpServerWebcc::HttpServerWebccPrivate::msgUnknownEx = EventMsg({
+   { "en-US", "Unknown Exception occurred." },
+   { "de-DE", "Unbekannte Exception aufgetreten." }
+});
 
-EventMsg HttpServerWebcc::HttpServerWebccPrivate::msgInvalidEndpointEx = EventMsg()
-   .Add("Invalid endpoint '%1'.", EventMsg::langEnUs)
-   .Add("Ungültiger Endpunkt '%1'.", EventMsg::langDeDe);
+EventMsg HttpServerWebcc::HttpServerWebccPrivate::msgFailedToStartEx = EventMsg({
+   { "en-US", "Couldn't start http server: \"%1\"." },
+   { "de-DE", "Http-Server konnte nicht gestartet werden: \"%1\"." }
+});
 
-EventMsg HttpServerWebcc::HttpServerWebccPrivate::msgInvalidEndpointHashtagWildcardEx = EventMsg()
-   .Add("Invalid endpoint '%1': '#' wildcard has to be at the end.", EventMsg::langEnUs)
-   .Add("Ungültiger Endpunkt '%1': '#' Wildcard muss am Ende stehen.", EventMsg::langDeDe);
+EventMsg HttpServerWebcc::HttpServerWebccPrivate::msgInvalidEndpointEx = EventMsg({
+   { "en-US", "Invalid endpoint '%1'." },
+   { "de-DE", "Ungültiger Endpunkt '%1'." }
+});
 
-EventMsg HttpServerWebcc::HttpServerWebccPrivate::msgInvalidCharacterInEndpointEx = EventMsg()
-   .Add("Invalid character '%1' in the endpoint path. This is a reserved character for path variables.", EventMsg::langEnUs)
-   .Add("Ungültiges Zeichen '%1' im Endpunkt-Pfad. Dies ist ein reserviertes Zeichen für Pfad-Variablen.", EventMsg::langDeDe);
+EventMsg HttpServerWebcc::HttpServerWebccPrivate::msgInvalidEndpointHashtagWildcardEx = EventMsg({
+   { "en-US", "Invalid endpoint '%1': '#' wildcard has to be at the end." },
+   { "de-DE", "Ungültiger Endpunkt '%1': '#' Wildcard muss am Ende stehen." }
+});
 
-EventMsg HttpServerWebcc::HttpServerWebccPrivate::msgUnsupportedHttpMethodEx = EventMsg()
-   .Add("Unsupported HTTP request method.", EventMsg::langEnUs)
-   .Add("Nicht unterstützte HTTP-Request Methode.", EventMsg::langDeDe);
+EventMsg HttpServerWebcc::HttpServerWebccPrivate::msgInvalidCharacterInEndpointEx = EventMsg({
+   { "en-US", "Invalid character '%1' in the endpoint path. This is a reserved character for path variables." },
+   { "de-DE", "Ungültiges Zeichen '%1' im Endpunkt-Pfad. Dies ist ein reserviertes Zeichen für Pfad-Variablen." }
+  });
 
-EventMsg HttpServerWebcc::HttpServerWebccPrivate::msgAmbiguousEndpointEx = EventMsg()
-   .Add("Ambigous endpoint '%1'. Registered endpoint '%2' already routes to this endpoint.", EventMsg::langEnUs)
-   .Add("Mehrdeutiger Endpunkt '%1'. Registrierter Endpunkt '%2' routet bereits zu diesem Endpunkt.", EventMsg::langDeDe);
+EventMsg HttpServerWebcc::HttpServerWebccPrivate::msgUnsupportedHttpMethodEx = EventMsg({
+   { "en-US", "Unsupported HTTP request method." },
+   { "de-DE", "Nicht unterstützte HTTP-Request Methode." }
+ });
 
-EventMsg HttpServerWebcc::HttpServerWebccPrivate::msgInvalidStatusCodeEx = EventMsg()
-   .Add("HTTP server '%1', Endpoint '%2': Invalid status code '%3'. The HTTP server returned an non-standardize status codes.", EventMsg::langEnUs)
-   .Add("HTTP-Server '%1', Endpunkt '%2': Ungültiger Status-Code '%3'. Der HTTP-Server hat einen nicht standardisierte Status-Codes zurückgegeben.", EventMsg::langDeDe);
+EventMsg HttpServerWebcc::HttpServerWebccPrivate::msgAmbiguousEndpointEx = EventMsg({
+   { "en-US", "Ambigous endpoint '%1'. Registered endpoint '%2' already routes to this endpoint." },
+   { "de-DE", "Mehrdeutiger Endpunkt '%1'. Registrierter Endpunkt '%2' routet bereits zu diesem Endpunkt." }
+});
 
-EventMsg HttpServerWebcc::HttpServerWebccPrivate::msgReserverHeaderEx = EventMsg()
-   .Add("HTTP server '%1', Endpoint '%2': The response header '%3' is set by the server automatically. Overwriting it is not allowed.", EventMsg::langEnUs)
-   .Add("HTTP-Server '%1', Endpunkt '%2': Der Antwort-Header '%3' wird automatisch vom Server gesetzt. Ihn zu überschreiben ist nicht erlaubt.", EventMsg::langDeDe);
+EventMsg HttpServerWebcc::HttpServerWebccPrivate::msgInvalidStatusCodeEx = EventMsg({
+   { "en-US", "HTTP server '%1', Endpoint '%2': Invalid status code '%3'. The HTTP server returned an non-standardize status codes." },
+   { "de-DE", "HTTP-Server '%1', Endpunkt '%2': Ungültiger Status-Code '%3'. Der HTTP-Server hat einen nicht standardisierte Status-Codes zurückgegeben." }
+});
 
-EventMsg HttpServerWebcc::HttpServerWebccPrivate::msgMissingCertificateEx = EventMsg()
-   .Add("HTTP server '%1' has a private key set but is missing a server SSL certificiate.", EventMsg::langEnUs)
-   .Add("HTTP-Server '%1' hat einen privaten Schlüssel gesetzt aber es fehlt ein Server SSL-Zertifikat.", EventMsg::langDeDe);
+EventMsg HttpServerWebcc::HttpServerWebccPrivate::msgReserverHeaderEx = EventMsg({
+   { "en-US", "HTTP server '%1', Endpoint '%2': The response header '%3' is set by the server automatically. Overwriting it is not allowed." },
+   { "de-DE", "HTTP-Server '%1', Endpunkt '%2': Der Antwort-Header '%3' wird automatisch vom Server gesetzt. Ihn zu überschreiben ist nicht erlaubt." }
+});
 
-EventMsg HttpServerWebcc::HttpServerWebccPrivate::msgMissingPrivateKeyEx = EventMsg()
-   .Add("HTTP server '%1' has a server SSL certificate set but is missing a private key.", EventMsg::langEnUs)
-   .Add("HTTP-Server '%1' hat ein Server SSL-Zertifikat gesetzt aber es fehlt ein privater Schlüssel.", EventMsg::langDeDe);
+EventMsg HttpServerWebcc::HttpServerWebccPrivate::msgMissingCertificateEx = EventMsg({
+   { "en-US", "HTTP server '%1' has a private key set but is missing a server SSL certificiate." },
+   { "de-DE", "HTTP-Server '%1' hat einen privaten Schlüssel gesetzt aber es fehlt ein Server SSL-Zertifikat." }
+});
 
-EventMsg HttpServerWebcc::HttpServerWebccPrivate::msgHeadWithBodyWarn = EventMsg()
-   .Add("HTTP server '%1', Endpoint '%2': The callback for HEAD requests returns a response body. HEAD requests may not have a response body and the returned body will be ignored.", EventMsg::langEnUs)
-   .Add("HTTP-Server '%1', Endpunkt '%2': Die Callback-Funktion für HEAD-Anfragen gibt einen Antwort-Body zurück. HEAD-Anfrage dürfen keinen Antwort-Body haben und der zurückgegebene Body wird ignoriert.", EventMsg::langDeDe);
+EventMsg HttpServerWebcc::HttpServerWebccPrivate::msgMissingPrivateKeyEx = EventMsg({
+   { "en-US", "HTTP server '%1' has a server SSL certificate set but is missing a private key." },
+   { "de-DE", "HTTP-Server '%1' hat ein Server SSL-Zertifikat gesetzt aber es fehlt ein privater Schlüssel." }
+ });
+
+EventMsg HttpServerWebcc::HttpServerWebccPrivate::msgHeadWithBodyWarn = EventMsg({
+   { "en-US", "HTTP server '%1', Endpoint '%2': The callback for HEAD requests returns a response body. HEAD requests may not have a response body and the returned body will be ignored." },
+   { "de-DE", "HTTP-Server '%1', Endpunkt '%2': Die Callback-Funktion für HEAD-Anfragen gibt einen Antwort-Body zurück. HEAD-Anfrage dürfen keinen Antwort-Body haben und der zurückgegebene Body wird ignoriert." }
+});
 
 //*****************************************************************************
 //! Handle implementation of the webcc::View that handles every HTTP request.
@@ -208,7 +226,7 @@ void HttpServerWebcc::HttpServerWebccPrivate::ServerThread::run()
 //*****************************************************************************
 HttpServerWebcc::HttpServerWebccPrivate::HttpServerWebccPrivate(HttpServerWebcc* parent) :
    parent(parent),
-   reservedHeaders({ "Content-Length", "Connection", "Date", "Server" }),
+   reservedHeaders({ "Server", "Content-Length", "Connection", "Date" }),
    pathVariableRx("\\{(.+)\\}", QRegularExpression::InvertedGreedinessOption)
 {
    pathVariableExactRx = QRegularExpression(QRegularExpression::anchoredPattern(pathVariableRx.pattern()), QRegularExpression::InvertedGreedinessOption);
@@ -623,7 +641,7 @@ webcc::ResponsePtr HttpServerWebcc::HttpServerWebccPrivate::ProcessRequest(const
    }
 
    // Head request should not return a response body.
-   if (request.method == HttpServer::HEAD && httpResponse.body.size() > 0) {
+   if (request.method & HttpServer::HEAD && httpResponse.body.size() > 0) {
       Warn(HeadWithBody).Arg(serverName).Arg(match.endpoint).Log();
    }
 
@@ -717,13 +735,15 @@ HttpServerWebcc::HttpMethod HttpServerWebcc::HttpServerWebccPrivate::MapMethod(Q
 //! \category HttpServerWebcc methods
 //*****************************************************************************
 
-EventMsg HttpServerWebcc::msgInvalidAddressEx = EventMsg()
-   .Add("The address '%1' is not a valid server address.", EventMsg::langEnUs)
-   .Add("Die Adresse '%1' ist keine gültige Server-Adresse.", EventMsg::langDeDe);
+EventMsg HttpServerWebcc::msgInvalidAddressEx = EventMsg({
+   { "en-US", "The address '%1' is not a valid server address." },
+   { "de-DE", "Die Adresse '%1' ist keine gültige Server-Adresse." }
+});
 
-EventMsg HttpServerWebcc::msgInvalidPortEx = EventMsg()
-   .Add("'%1' is not a valid port number. Port numbers have to between 0 and 65535.", EventMsg::langEnUs)
-   .Add("'%1' ist keine gültige Portnummer. Der Wert muss zwischen 0 und 65535 liegen.", EventMsg::langDeDe);
+EventMsg HttpServerWebcc::msgInvalidPortEx = EventMsg({
+   { "en-US", "'%1' is not a valid port number. Port numbers have to between 0 and 65535." },
+   { "de-DE", "'%1' ist keine gültige Portnummer. Der Wert muss zwischen 0 und 65535 liegen." }
+});
 
 HttpServerWebcc::HttpServerWebcc() :
    p(new HttpServerWebccPrivate(this))
@@ -806,4 +826,5 @@ bool HttpServerWebcc::SetPrivateKeyImpl(const QByteArray& keyData, HttpServer::S
 {
    QMutexLocker lock(&members);
    return p->SetPrivateKey(keyData, encoding, algorithm, passphrase);
+}
 }

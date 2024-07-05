@@ -18,13 +18,13 @@
 //!
 //*****************************************************************************
 
-#ifndef GLOBAL__H
-#define GLOBAL__H
+#ifndef MAU_GLOBAL__H
+#define MAU_GLOBAL__H
 
-#ifdef HTTPSERVER_DLL
-#define HTTPSERVER_EXPORT __declspec(dllexport)
+#ifdef MAUCPPHTTPSERVER_DLL
+#define MAUCPPHTTPSERVER_EXPORT __declspec(dllexport)
 #else
-#define HTTPSERVER_EXPORT __declspec(dllimport)
+#define MAUCPPHTTPSERVER_EXPORT __declspec(dllimport)
 #endif
 
 #endif
