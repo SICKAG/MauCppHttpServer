@@ -54,6 +54,11 @@ public:
       //HTTP_2  // planned feature
    };
 
+   enum ServerProtocol {
+      HTTP,
+      HTTPS
+   };
+
    enum HttpMethod {
       UNKNOWN  = 0x0000,
       GET      = 0x0001,
@@ -99,6 +104,12 @@ public:
       QString multiLevel;                          //!< Path that matched the multi level '#' wildcard
       QHash<QString, QString> query;               //!< The query component of the URI
    };
+
+   void Protocol(ServerProtocol protocol);
+      //!< \brief Set the server protocol.
+      //! If the protocol is set to HTTPS the server certificate and private 
+      //! key also have to be set.
+      //! \param protocol The protocol the server uses.
 
    QString Address();
       //!< \brief Retrieves the address for this server.
@@ -188,6 +199,7 @@ public:
       //!<     the certificate.
 
 protected:
+   virtual void ProtocolImpl(ServerProtocol protocol) = 0;
    virtual QString AddressImpl() = 0;
    virtual void AddressImpl(const QString& address) = 0;
    virtual int PortImpl() = 0;

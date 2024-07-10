@@ -22,10 +22,13 @@ cmake_minimum_required(VERSION 3.27.4)
 
 project(MauCppHttpServer)
 
+set(Boost_NO_WARN_NEW_VERSIONS ON)
+
 find_package(Qt6Core)
 find_package(Qt6Network)
 find_package(Boost REQUIRED COMPONENTS system)
 find_package(OpenSSL REQUIRED)
+
 set(CMAKE_AUTOMOC ON)
 set(CMAKE_DEBUG_POSTFIX "d")
 

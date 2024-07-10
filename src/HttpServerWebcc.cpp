@@ -89,7 +89,7 @@ public:
    HttpServerWebccPrivate(HttpServerWebcc* parent);
    ~HttpServerWebccPrivate() {}
 
-   bool Start(const QHostAddress& address, int& port);
+   bool Start(const QHostAddress& address, int& port, ServerProtocol protocol);
    bool Stop();
 
    bool AddEndpoint(const QString& endpoint, HttpMethod method);
@@ -109,6 +109,7 @@ private:
       QString multiLevel;
    };
 
+   QString            SchemeName(ServerProtocol protocol);
    int                GetFreePort(int port);
    UrlMatch           Matches(const QString& endpoint, const QString& url);
    webcc::ResponsePtr HandleRequest(webcc::RequestPtr requestData);
@@ -192,13 +193,13 @@ EventMsg HttpServerWebcc::HttpServerWebccPrivate::msgReserverHeaderEx = EventMsg
 });
 
 EventMsg HttpServerWebcc::HttpServerWebccPrivate::msgMissingCertificateEx = EventMsg({
-   { "en-US", "HTTP server '%1' has a private key set but is missing a server SSL certificiate." },
-   { "de-DE", "HTTP-Server '%1' hat einen privaten Schlüssel gesetzt aber es fehlt ein Server SSL-Zertifikat." }
+   { "en-US", "HTTPS server '%1' is missing a server SSL certificiate." },
+   { "de-DE", "HTTPS-Server '%1' hat kein Server SSL-Zertifikat gesetzt." }
 });
 
 EventMsg HttpServerWebcc::HttpServerWebccPrivate::msgMissingPrivateKeyEx = EventMsg({
-   { "en-US", "HTTP server '%1' has a server SSL certificate set but is missing a private key." },
-   { "de-DE", "HTTP-Server '%1' hat ein Server SSL-Zertifikat gesetzt aber es fehlt ein privater Schlüssel." }
+   { "en-US", "HTTP server '%1' is missing a private key." },
+   { "de-DE", "HTTP-Server '%1' hat keinen privaten Schlüssel für das Server SSL-Zertifikat gesetzt." }
  });
 
 EventMsg HttpServerWebcc::HttpServerWebccPrivate::msgHeadWithBodyWarn = EventMsg({
@@ -241,33 +242,34 @@ HttpServerWebcc::HttpServerWebccPrivate::HttpServerWebccPrivate(HttpServerWebcc*
 //! \returns bool    If the server was started.
 //!
 //*****************************************************************************
-bool HttpServerWebcc::HttpServerWebccPrivate::Start(const QHostAddress& address, int& port)
+bool HttpServerWebcc::HttpServerWebccPrivate::Start(const QHostAddress& address, int& port, ServerProtocol protocol)
 {
    port = GetFreePort(port);
-   QString serverAddress = address.toString() + ":" + QString::number(port);
+   serverName = QString("%1://%2:%3").arg(SchemeName(protocol)).arg(address.toString()).arg(port);
 
-   bool sslEnabled = false;
-   if (!certificate.isNull() && privateKey.isNull()) {
-      Ex(MissingPrivateKey).Arg("https://" + serverAddress).Raise();
-   } else if (certificate.isNull() && !privateKey.isNull()) {
-      Ex(MissingCertificate).Arg("https://" + serverAddress).Raise();
-   } else if (!certificate.isNull() && !privateKey.isNull()) {
-      // HTTPs server
-      server = new webcc::SslServer(boost::asio::ip::tcp::v4(), port);
+   switch (protocol)
+   {
+      case mau::HttpServer::HTTP:
+         server = new webcc::Server(boost::asio::ip::tcp::v4(), port);
+         break;
+      case mau::HttpServer::HTTPS:
+         if (certificate.isNull()) {
+            Ex(MissingCertificate).Arg(serverName).Raise();
+         } else if (privateKey.isNull()) {
+            Ex(MissingPrivateKey).Arg(serverName).Raise();
+         }
 
-      // Setup ssl context
-      QByteArray certificateData = certificate.toPem();
-      QByteArray privateKeyData  = privateKey .toPem();
+         server = new webcc::SslServer(boost::asio::ip::tcp::v4(), port); 
 
-      auto& sslContext = static_cast<webcc::SslServer*>(server)->ssl_context();
-      sslContext.set_options(boost::asio::ssl::context::default_workarounds);
-      sslContext.use_certificate_chain(boost::asio::const_buffer(reinterpret_cast<const void*>(certificateData.constData()), certificateData.size()));
-      sslContext.use_private_key      (boost::asio::const_buffer(reinterpret_cast<const void*>(privateKeyData.constData()) , privateKeyData.size()), boost::asio::ssl::context::pem);
+         // Setup ssl context
+         QByteArray certificateData = certificate.toPem();
+         QByteArray privateKeyData  = privateKey.toPem();
 
-      sslEnabled = true;
-   } else {
-      // HTTP server
-      server = new webcc::Server(boost::asio::ip::tcp::v4(), port);
+         auto& sslContext = static_cast<webcc::SslServer*>(server)->ssl_context();
+         sslContext.set_options          (boost::asio::ssl::context::default_workarounds);
+         sslContext.use_certificate_chain(boost::asio::const_buffer(reinterpret_cast<const void*>(certificateData.constData()), certificateData.size()));
+         sslContext.use_private_key      (boost::asio::const_buffer(reinterpret_cast<const void*>(privateKeyData.constData()), privateKeyData.size()), boost::asio::ssl::context::pem);
+         break;
    }
 
    // Route every request to a RootView view.
@@ -291,9 +293,6 @@ bool HttpServerWebcc::HttpServerWebccPrivate::Start(const QHostAddress& address,
    // Create and start server thread. Necessary because server->run() is blocking.
    serverThread = std::make_unique<ServerThread>(server);
    serverThread->start();
-
-   QString protocol = sslEnabled ? "https://" : "http://";
-   serverName = protocol + serverAddress;
    return true;
 }
 
@@ -460,6 +459,24 @@ bool HttpServerWebcc::HttpServerWebccPrivate::SetPrivateKey(const QByteArray& da
 bool HttpServerWebcc::HttpServerWebccPrivate::IsHttps()
 {
    return !certificate.isNull() || !privateKey.isNull();
+}
+
+//*****************************************************************************
+//!
+//! \briefReturns the URI scheme for the given server protocol
+//!
+//! \param protocol A server protocol.
+//! \returns URI scheme of the procotol.
+//!
+//*****************************************************************************
+QString HttpServerWebcc::HttpServerWebccPrivate::SchemeName(ServerProtocol protocol)
+{
+   switch (protocol)
+   {
+      case HttpServer::HTTP:  return "http";
+      case HttpServer::HTTPS: return "https";
+      default:                return "https";
+   }
 }
 
 //*****************************************************************************
@@ -746,12 +763,19 @@ EventMsg HttpServerWebcc::msgInvalidPortEx = EventMsg({
 });
 
 HttpServerWebcc::HttpServerWebcc() :
-   p(new HttpServerWebccPrivate(this))
+   p(new HttpServerWebccPrivate(this)),
+   protocol(HttpServer::HTTPS)
 {
 }
 
 HttpServerWebcc::~HttpServerWebcc()
 {
+}
+
+void HttpServerWebcc::ProtocolImpl(ServerProtocol protocol)
+{
+   QMutexLocker lock(&members);
+   HttpServerWebcc::protocol = protocol;
 }
 
 QString HttpServerWebcc::AddressImpl()
@@ -795,7 +819,7 @@ bool HttpServerWebcc::IsHttpsImpl()
 bool HttpServerWebcc::StartImpl()
 {
    QMutexLocker lock(&members);
-   return p->Start(address, port);
+   return p->Start(address, port, protocol);
 }
 
 bool HttpServerWebcc::StopImpl()

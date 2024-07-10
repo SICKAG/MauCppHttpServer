@@ -75,6 +75,7 @@ public:
    HttpServerWebcc& operator=(const HttpServerWebcc&) = delete;
 
 protected:
+   virtual void ProtocolImpl(ServerProtocol protocol);
    virtual QString AddressImpl();
    virtual void AddressImpl(const QString& address);
    virtual int PortImpl();
@@ -95,6 +96,7 @@ protected:
    class HttpServerWebccPrivate;
    std::unique_ptr<HttpServerWebccPrivate> p;   //!< Pointer to implementation of HTTP server with Webcc.
 
+   ServerProtocol protocol;
    QHostAddress address;
    int port;
 

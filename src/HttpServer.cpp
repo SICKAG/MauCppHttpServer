@@ -26,6 +26,10 @@ static char THIS_FILE[] = __FILE__;
 
 namespace mau {
 
+void HttpServer::Protocol(ServerProtocol protocol) {
+   ProtocolImpl(protocol);
+}
+
 QString HttpServer::Address() {
    return AddressImpl();
 }
