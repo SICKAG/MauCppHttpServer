@@ -2,6 +2,8 @@
 
 DLL wrapper for C++ HTTP server abstraction and implementations.
 
+Copyright (C) 2024 SICK AG
+
 ## Licenses
 
 This software is under the LGPLv3. Please see the ``LICENSE`` file and the ``third-party/licenses`` folder for details.
