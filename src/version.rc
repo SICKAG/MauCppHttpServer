@@ -23,12 +23,12 @@ BEGIN
         BLOCK "040704b0"
         BEGIN
             VALUE "CompanyName", "SICK AG\0"
-            VALUE "FileDescription", "HttpServer.dll\0"
+            VALUE "FileDescription", "MauCppHttpServer.dll\0"
             VALUE "FileVersion", "0\0"
             VALUE "LegalCopyright", "Copyright (C) 2024 SICK AG\0"
-            VALUE "OriginalFilename", "HttpServer.dll\0"
+            VALUE "OriginalFilename", "MauCppHttpServer.dll\0"
             VALUE "PrivateBuild", "vc17x64r\0"
-            VALUE "ProductName", "HttpServer\0"
+            VALUE "ProductName", "MauCppHttpServer\0"
             VALUE "ProductVersion", "1.0.0\0"
         END
     END
