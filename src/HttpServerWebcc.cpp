@@ -427,7 +427,7 @@ bool HttpServerWebcc::HttpServerWebccPrivate::SetPrivateKey(const QByteArray& da
       case SslKeyAlgorithm::RSA:             qAlgorithm = QSsl::Rsa;  break;
       case SslKeyAlgorithm::DSA:             qAlgorithm = QSsl::Dsa;  break;
       case SslKeyAlgorithm::EllipticCurve:   qAlgorithm = QSsl::Ec;   break;
-      //case SslKeyAlgorithm::DiffieHellman:   qAlgorithm = QSsl::Dh;   break; // Available with Qt 5.14
+      case SslKeyAlgorithm::DiffieHellman:   qAlgorithm = QSsl::Dh;   break;
       default: return false;
    }
 
