@@ -1,26 +1,43 @@
-# HttpServer
+# MauCppHttpServer
 
 DLL wrapper for C++ HTTP server abstraction and implementations.
 
-### Dependencies
+## Licenses
+
+This software is under the LGPLv3. Please see the ``LICENSE`` file and the ``third-party/licenses`` folder for details.
+
+Third-party libraries are:
 
 * [Qt](https://www.qt.io/)
 * [Boost](https://www.boost.org/)
 * [OpenSSL](https://www.openssl.org/)
 * [Webcc](https://github.com/sickAG/webcc/)
+
+At build time, you also need:
+
 * [CMake](https://cmake.org/)
 
 ## Building from source
 
-To build, do something like this:
+This is how we build the DLL at SICK AG. By naming the source folder after the release, we
+ensure that the paths in debug ```.PDB``` files also have the release number embedded.
+This makes co-existence of several versions on target machines, with debug sources separated from each other, possible.
 
-- Clone the project into C:\Software\External\vc17_x64\MauCppHttpServer
-- Create an empty folder C:\Software\External\vc17_x64\MauCppHttpServer-build (``mkdir C:\Software\External\vc17_x64\MauCppHttpServer-build``)
-- Go to the build folder (``cd C:\Software\External\vc17_x64\MauCppHttpServer-build``)
-- Execute the following CMake command (using example dependency locations):
+Of course, directories may be named differently.
+
+Windows build instructions (other platforms are not officialy supported):
+
+- Clone the project into ``C:\Software\External\vc17_x64\MauCppHttpServer-1.0.0`` (adjusted to the version number you intend to build).
+- Check out the Git tag to be built.
+- Create an empty build folder like C:\Software\External\vc17_x64\MauCppHttpServer-build (``mkdir C:\Software\External\vc17_x64\MauCppHttpServer-build``).
+- Open the suitable Visual Studio Native Tools Command Prompt and change directory to the build folder.
+- Execute the following CMake command, possibly entering your own dependency locations (paths here are from the SICK build system):
 
 ```
-cmake ..\MauCppHttpServer\src -DCMAKE_INSTALL_PREFIX=C:\Software\External\vc17_x64\MauCppHttpServer -DCMAKE_PREFIX_PATH=C:\Software\External\vc17_x64\qt\6.7.1 -DBoost_INCLUDE_DIR=C:\Software\External\vc17_x64\boost_1_85_0\ -DOPENSSL_ROOT_DIR=C:\Software\External\vc17_x64\openssl-3.2.1 -DWEBCCDIR=C:\Software\External\vc17_x64\webcc-1.0.1-sick
+cmake ..\MauCppHttpServer-1.0.0\src -DCMAKE_INSTALL_PREFIX=C:\Software\External\vc17_x64\MauCppHttpServer-1.0.0 -DCMAKE_PREFIX_PATH=C:\Software\External\vc17_x64\qt\6.7.1 -DBoost_INCLUDE_DIR=C:\Software\External\vc17_x64\boost_1_85_0\ -DOPENSSL_ROOT_DIR=C:\Software\External\vc17_x64\openssl-3.2.1 -DWEBCCDIR=C:\Software\External\vc17_x64\webcc-1.0.1-sick
 ```
 
-Then, you may build the solution (don't forget to build the INSTALL target).
+Note that again, we have the release version embedded in the ``CMAKE_INSTALL_PREFIX``, as we want to install the binaries
+into the sources. This is not mandatory.
+
+Finally, you may build the solution. Do not forget to build the ``INSTALL`` target as well.
