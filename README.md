@@ -41,3 +41,23 @@ Note that again, we have the release version embedded in the ``CMAKE_INSTALL_PRE
 into the sources. This is not mandatory.
 
 Finally, you may build the solution. Do not forget to build the ``INSTALL`` target as well.
+
+## Deployment for SICK Build System
+
+You may skip this entire section if you just intend do build the binary and replace it manually.
+
+### Identity Files
+
+For proper SICK build system integration, the following empty & extensionless files should be created in the directory defined by ``CMAKE_INSTALL_PREFIX`` :
+
+- ``version_1_0_0`` (version identity; adjust version number)
+- ``generator_vc17`` (compiler identity; adjust if necessary)
+- ``platform_x64`` (platform architecture)
+
+### Deploy to Artifactory
+
+When ``.rar``-ing, exclude the ``.git`` folder!
+
+Naming pattern: ``MauCppHttpServer-1.0.0_v17_x64.rar``
+
+Deploy in the ``dep`` category.
